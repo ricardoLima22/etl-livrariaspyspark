@@ -43,5 +43,13 @@ def df_transform(df,df1):
                    F.col("data_de_nascimento"),
                    F.col("estado"))
     )
-    return  select_compras, cliente_transform
+
+    join_cliente_compras = (
+        cliente_transform.alias("cl")
+        .join(select_compras, select_compras.cd_cliente == cliente_transform.id, how= "inner")
+    )
+    teste = (
+        join_cliente_compras.select(F.col("cp.id"))
+    )
+    return  select_compras, teste
 
