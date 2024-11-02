@@ -14,18 +14,16 @@ def main():
     livros = spark.read.parquet(r".\docs\LIVROS.parquet" ,header = True, inferSchema = True, sep = "|").alias("lv")
 
 
-    result_compras, result_cliente = df_transform(df=compras,df1=clientes)
+    result_compras, result_clientes = df_transform(df=compras,df1=clientes)
 
     result_compras.show(20,False)
-    result_cliente.show(20,False)
+    result_clientes.show(20,False)
 
-    compras.printSchema()
+    # result_compras.write.format("parquet").mode("overwrite").save("D:\compras")
+    # result_clientes.write.format("parquet").mode("overwrite").save("D:\clientes")
 
-
-
-
-
-
+    
     spark.stop()
 if __name__ == "__main__":
     main()
+    
