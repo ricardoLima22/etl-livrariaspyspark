@@ -3,7 +3,7 @@ from pyspark.sql.types import IntegerType, StringType
 
 
 
-def df_transform(df,df1):
+def df_transform(df,df1,df2,df3):
 
     ## TRANSFORM COMPRAS
     select_compras = (
@@ -18,7 +18,7 @@ def df_transform(df,df1):
     #     select_compras
     #     .groupby("cartao_bandeira").count()
     # )
-
+    
     transform_compras = (
         select_compras
         .withColumn("cartao_bandeira", F.regexp_replace(F.col("cartao_bandeira"), "[^a-zA-Z]", " "))
@@ -59,14 +59,40 @@ def df_transform(df,df1):
     )
 
 
-    ## JOIN 
+    ##TRANSFORM LIVROS
+
+    select_livros = (
+        df2.select(F.col("id"),F.col("data_lancamento"), F.col("numero_paginas"),F.col("preco"))
+    )
+
+    ## TRANSFORM AUTORES
+    select_autores = (
+        df3.select(F.col("id"), F.col("titulo"),F.col("autor")).where(F.col("autor").isin("Jorge Luis Borges"))
+    )
+
+
+    ## JOINs
     join_cliente_compras = (
         cliente_transform.alias("cl")
         .join(transform_compras.alias("cp"), F.col("cp.cd_cliente") == F.col("cl.id"), how="inner")
     )
 
+    join_livros_autores = (
+        select_autores.alias("at")
+        .join(select_livros.alias("lv"), F.col("at.id") == F.col("lv.id"), how="inner") 
+    )
 
-    teste = (
+    selectjoin_livros_autores = (
+        join_livros_autores.select(F.col("lv.id"),
+                                   F.col("at.titulo"),
+                                   F.col("at.autor"),
+                                   F.col("lv.data_lancamento"),
+                                   F.col("lv.numero_paginas"),
+                                   F.col("lv.preco"))
+    )
+
+
+    selectjoin_cliente_compra = (
         join_cliente_compras.select(F.col("cl.id").alias("id_clientes"),  
                                     F.col("cl.name"), 
                                     F.col("cl.idade"), 
@@ -77,6 +103,28 @@ def df_transform(df,df1):
                                     F.col("cp.cd_livro")
         )
     )
+
+
+    join_geral = (
+        selectjoin_cliente_compra.alias("cc")
+        .join(selectjoin_livros_autores.alias("la"), F.col("la.id") == F.col("cc.cd_livro"), how="inner" )
+    )
     
-    return  transform_compras, teste
+    select_join = (
+        join_geral.select(F.col("cc.id_clientes"),  
+                                    F.col("cc.name"), 
+                                    F.col("cc.idade"), 
+                                    F.col("cc.estado"),
+                                    F.col("cc.id_compras"),
+                                    F.col("cc.cartao_bandeira"),
+                                    F.col("cc.data"),
+                                    F.col("la.id").alias("id_livro_autor"),
+                                    F.col("la.titulo"),
+                                    F.col("la.autor"),
+                                    F.col("la.data_lancamento"),
+                                    F.col("la.numero_paginas"),
+                                    F.col("la.preco")
+        )
+    )
+    return  transform_compras, selectjoin_cliente_compra, selectjoin_livros_autores, select_join
 
