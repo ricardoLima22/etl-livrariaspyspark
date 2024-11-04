@@ -67,7 +67,7 @@ def df_transform(df,df1,df2,df3):
 
     ## TRANSFORM AUTORES
     select_autores = (
-        df3.select(F.col("id"), F.col("titulo"),F.col("autor")).where(F.col("autor").isin("Jorge Luis Borges"))
+        df3.select(F.col("id"), F.col("titulo"),F.col("autor"))
     )
 
 
@@ -124,7 +124,9 @@ def df_transform(df,df1,df2,df3):
                                     F.col("la.data_lancamento"),
                                     F.col("la.numero_paginas"),
                                     F.col("la.preco")
-        )
+        ).orderBy("idade")
     )
+
+
     return  transform_compras, selectjoin_cliente_compra, selectjoin_livros_autores, select_join
 
