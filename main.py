@@ -24,9 +24,10 @@ def main():
     result_autores.write.format("console").save()
 
 
-    # result_compras.write.format("parquet").mode("overwrite").save("D:\compras")
-    # result_clientes.write.format("parquet").mode("overwrite").save("D:\clientes")
-    result_autores.write.format("parquet").mode("overwrite").save(r"D:\table_joins")
+    # result_autores.write.format("parquet")\
+    #                     .mode("overwrite")\
+    #                     .option("compression", "gzip")\
+    #                     .save(r"D:\livraria_tabela\table_join")
     
     spark.stop()
 if __name__ == "__main__":
