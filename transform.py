@@ -25,13 +25,19 @@ def df_transform(df,df1,df2,df3):
         .withColumn("cartao_bandeira", F.split(F.col("cartao_bandeira"), "    ").getItem(0))
         .withColumn("cartao_bandeira", F.split(F.col("cartao_bandeira"), "   ").getItem(0))
     )
+    # transform_compras.write.format("parquet")\
+    #                     .mode("overwrite")\
+    #                     .option("compression", "gzip")\
+    #                     .save(r"D:\livraria_tabela\table_compras")
 
 
     ## TRANSFORM CLIENTE
     transform_name_cliente = (
         df1
-        .withColumn("name", F.when(F.col("name").rlike(r"^(Sra\.|Sr\.|Srta\.|Dr)"), F.expr("substring(name, 6, length(name))"))
+        .withColumn("name", F.when(F.col("name").rlike(r"^(Sra\.|Sr\.|Srta\.|Dr)"), F.expr("substring(name, 5, length(name))"))
                                    .otherwise(F.col("name")))
+        .withColumn("name", F.regexp_replace("name", r"\.", ""))
+        .withColumn("name", F.trim(F.col("name")))
     )
 
     name_cliente = (
@@ -57,6 +63,10 @@ def df_transform(df,df1,df2,df3):
                    F.col("data_de_nascimento"),
                    F.col("estado"))
     )
+    # cliente_transform.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\table_cliente")
 
 
     ##TRANSFORM LIVROS
@@ -64,11 +74,19 @@ def df_transform(df,df1,df2,df3):
     select_livros = (
         df2.select(F.col("id"),F.col("data_lancamento"), F.col("numero_paginas"),F.col("preco"))
     )
+    select_livros.write.format("parquet")\
+                       .mode("overwrite")\
+                       .option("compression", "gzip")\
+                       .save(r"D:\livraria_tabela\table_livro")
 
     ## TRANSFORM AUTORES
     select_autores = (
         df3.select(F.col("id"), F.col("titulo"),F.col("autor"))
     )
+    # select_autores.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\table_autores")
 
 
     ## JOINs
@@ -90,12 +108,17 @@ def df_transform(df,df1,df2,df3):
                                    F.col("lv.numero_paginas"),
                                    F.col("lv.preco"))
     )
+    # selectjoin_livros_autores.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\tabelas_joins\table_livros_autores_joins")
 
 
     selectjoin_cliente_compra = (
         join_cliente_compras.select(F.col("cl.id").alias("id_clientes"),  
                                     F.col("cl.name"), 
-                                    F.col("cl.idade"), 
+                                    F.col("cl.idade"),
+                                    F.col("cl.data_de_nascimento"),
                                     F.col("cl.estado"),
                                     F.col("cp.id").alias("id_compras"),
                                     F.col("cp.cartao_bandeira"),
@@ -103,6 +126,10 @@ def df_transform(df,df1,df2,df3):
                                     F.col("cp.cd_livro")
         )
     )
+    # selectjoin_cliente_compra.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\tabelas_joins\table_compras_clientes_joins")
 
 
     join_geral = (
@@ -113,7 +140,8 @@ def df_transform(df,df1,df2,df3):
     select_join = (
         join_geral.select(F.col("cc.id_clientes"),  
                                     F.col("cc.name"), 
-                                    F.col("cc.idade"), 
+                                    F.col("cc.idade"),
+                                    F.col("cc.data_de_nascimento"),
                                     F.col("cc.estado"),
                                     F.col("cc.id_compras"),
                                     F.col("cc.cartao_bandeira"),
@@ -124,9 +152,12 @@ def df_transform(df,df1,df2,df3):
                                     F.col("la.data_lancamento"),
                                     F.col("la.numero_paginas"),
                                     F.col("la.preco")
-        ).orderBy("idade")
+        )
     )
-
+    # select_join.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\tabelas_joins\table_geral_joins")
 
     return  transform_compras, selectjoin_cliente_compra, selectjoin_livros_autores, select_join
 
