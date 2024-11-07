@@ -1,7 +1,8 @@
 import pyspark.sql.functions as F
 from pyspark.sql.types import IntegerType, StringType
 
-
+acentos     = "áàãâéèêíìóòõôúùûüç"
+sem_acentos = "aaaaeeeiioooouuuuc"
 
 def df_transform(df,df1,df2,df3):
 
@@ -24,6 +25,7 @@ def df_transform(df,df1,df2,df3):
         .withColumn("cartao_bandeira", F.regexp_replace(F.col("cartao_bandeira"), "[^a-zA-Z]", " "))
         .withColumn("cartao_bandeira", F.split(F.col("cartao_bandeira"), "    ").getItem(0))
         .withColumn("cartao_bandeira", F.split(F.col("cartao_bandeira"), "   ").getItem(0))
+        .withColumn("cartao_bandeira", F.lower(F.translate("cartao_bandeira", acentos, sem_acentos)))
     )
     # transform_compras.write.format("parquet")\
     #                     .mode("overwrite")\
@@ -38,15 +40,15 @@ def df_transform(df,df1,df2,df3):
                                    .otherwise(F.col("name")))
         .withColumn("name", F.regexp_replace("name", r"\.", ""))
         .withColumn("name", F.trim(F.col("name")))
+        .withColumn("name", F.lower(F.col("name")))
+        .withColumn("name", F.translate("name", acentos,sem_acentos))
+
     )
 
-    name_cliente = (
-        transform_name_cliente
-        .withColumn("name", F.trim(F.col("name")))
-    )
+    # transform_name_cliente.write.format("console").save()
 
     create_table_idade = (
-        name_cliente
+        transform_name_cliente
         .withColumn("idade", F.datediff(F.current_date(),F.col("data_de_nascimento"))/365)
     )
 
@@ -60,13 +62,14 @@ def df_transform(df,df1,df2,df3):
                    F.col("cpf"),
                    F.col("name"),
                    F.col("idade"),
+                   F.col("email"),
                    F.col("data_de_nascimento"),
                    F.col("estado"))
     )
     # cliente_transform.write.format("parquet")\
     #                    .mode("overwrite")\
     #                    .option("compression", "gzip")\
-    #                    .save(r"D:\livraria_tabela\table_cliente")
+    #                    .save(r"D:\livraria_tabela\table_clientes")
 
 
     ##TRANSFORM LIVROS
@@ -74,15 +77,22 @@ def df_transform(df,df1,df2,df3):
     select_livros = (
         df2.select(F.col("id"),F.col("data_lancamento"), F.col("numero_paginas"),F.col("preco"))
     )
-    select_livros.write.format("parquet")\
-                       .mode("overwrite")\
-                       .option("compression", "gzip")\
-                       .save(r"D:\livraria_tabela\table_livro")
+    # select_livros.write.format("parquet")\
+    #                    .mode("overwrite")\
+    #                    .option("compression", "gzip")\
+    #                    .save(r"D:\livraria_tabela\table_livro")
 
-    ## TRANSFORM AUTORES
+    ## TRANSFORM AUTORES    
     select_autores = (
         df3.select(F.col("id"), F.col("titulo"),F.col("autor"))
     )
+
+    transform_autores = (
+        select_autores
+        .withColumn("titulo", F.lower(F.translate("titulo", acentos, sem_acentos)))
+        .withColumn("autor", F.lower(F.translate("autor", acentos, sem_acentos)))
+    )
+
     # select_autores.write.format("parquet")\
     #                    .mode("overwrite")\
     #                    .option("compression", "gzip")\
@@ -96,7 +106,7 @@ def df_transform(df,df1,df2,df3):
     )
 
     join_livros_autores = (
-        select_autores.alias("at")
+        transform_autores.alias("at")
         .join(select_livros.alias("lv"), F.col("at.id") == F.col("lv.id"), how="inner") 
     )
 
